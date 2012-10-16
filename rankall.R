@@ -1,54 +1,5 @@
 # return data ranking rate by state
 
-ranks <- function(X,num)  {
-  # return ranking rates based on num
-  #  - best, worst or number
-  #
-  if (num == "best"){
-    return(min(X))
-  } 
-  else if (num == "worst") {
-    
-    #print(X)
-    #print(max(X))
-    return(max(X))
-  }
-  else {
-    num <- as.integer(num)
-    if (!is.na(num) & num <= length(X))
-    {
-      ord <- order(X)
-      return(X[ord[num]])
-    }
-    return(NA)
-  } 
-  return(NA)
-}
-
-extract_rank_data <- function(x,data,index,num)
-{
-  # extract rank data based on ranks rating
-  # x is list of rank rating
-  #
-  ret <- data.frame()
-  #print(index)
-  for (i in 1:length(x)) {
-  
-    st <- names(x[i])
-    val <- x[i]
-    if (!is.na(val)){
-      if (num == 'worst')
-        tmp <- data[data$State == st & data[,index]>=val,]
-      else
-        tmp <- data[data$State == st & data[,index]<=val,]
-
-      tmp <- tmp[,c(2,7)]
-      ret <- rbind(ret, tmp)
-    }
-  }
-  return(ret)
-}
-
 
 rankall <- function(outcome,num = "best"){
   
@@ -69,7 +20,7 @@ rankall <- function(outcome,num = "best"){
   # cc <- complete.cases(data)
   # data <- data[cc,]
   
-  # outcome index
+  # outcome index and outcome t_data
   if (outcome == 'heart attack') {
     idx = 11
     t_data <- data[!is.na(data[,idx]),]
@@ -80,13 +31,61 @@ rankall <- function(outcome,num = "best"){
     idx = 23
     t_data <- data[!is.na(data[,idx]),]
   }  
-  # default
   
+  ranks <- function(X,num)  {
+    # return ranking rates based on num
+    #  - best, worst or number
+    #
+    if (num == "best"){
+      return(min(X))
+    } 
+    else if (num == "worst") {
+      
+      #print(X)
+      #print(max(X))
+      return(max(X))
+    }
+    else {
+      num <- as.integer(num)
+      if (!is.na(num) & num <= length(X))
+      {
+        ord <- order(X)
+        return(X[ord[num]])
+      }
+      return(NA)
+    } 
+    return(NA)
+  }
+  # 
   rank_val <- tapply(t_data[,idx],t_data$State,ranks,num)
-  #print(rank_val)
-
-  ret <- extract_rank_data(rank_val,t_data,idx,num)
-  names(ret) <- c("Hospital","State")
-  return(ret)
   
+  extract_rank_data <- function(x,data,index,num)
+  {
+    # extract rank data based on ranks rating
+    # x is list of rank rating
+    #
+    ret <- data.frame()
+    #print(index)
+    for (i in 1:length(x)) {
+      
+      st <- names(x[i])
+      val <- x[i]
+      if (!is.na(val)){
+        if (num == 'worst')
+          tmp <- data[data$State == st & data[,index]>=val,]
+        else
+          tmp <- data[data$State == st & data[,index]<=val,]
+        
+        tmp <- tmp[,c(2,7)]
+        ret <- rbind(ret, tmp)
+      }
+    }
+    return(ret)
+  }
+  
+  ret <- extract_rank_data(rank_val,t_data,idx,num)
+  
+  names(ret) <- c("Hospital","State")
+  
+  return(ret)
 }
