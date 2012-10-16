@@ -31,7 +31,7 @@ extract_rank_data <- function(x,data,index,num)
   # x is list of rank rating
   #
   ret <- data.frame()
-  print(index)
+  #print(index)
   for (i in 1:length(x)) {
   
     st <- names(x[i])
@@ -86,7 +86,7 @@ rankall <- function(outcome,num = "best"){
   #print(rank_val)
 
   ret <- extract_rank_data(rank_val,t_data,idx,num)
-  #return(con_list_to_df(ret))
+  names(ret) <- c("Hospital","State")
   return(ret)
   
 }
