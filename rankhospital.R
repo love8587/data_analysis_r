@@ -1,26 +1,28 @@
 rankhospital <-function(state,outcome,num = "best"){
   
   data <- read.csv("outcome-of-care-measures.csv",colClasses="character")
-  str_states <- data$State
-  if (!state %in% str_states){
-    stop("Invalid state")
-  }
   
-  str_outcome <- c("heart attack","heart failure","pneumonia")
-  if (!outcome %in% str_outcome){
+  if (is.na(match(state,data$State)))  stop("Invalid state") 
     
-    stop("invalid outcome")
-  }
+  str_outcome <- c("heart attack","heart failure","pneumonia")
   
+  if (!outcome %in% str_outcome){ stop("invalid outcome")  }
+    
   
-  # 
+  # heart attack
   data[,11] <- suppressWarnings(as.numeric(data[,11]))
+  # heart failure
   data[,17] <- suppressWarnings(as.numeric(data[,17]))
+  # pneumonia
   data[,23] <- suppressWarnings(as.numeric(data[,23]))
+  # state
   data$State <- factor(data$State)
   
+  # clean up NA
   cc <- complete.cases(data)
   data <- data[cc,]
+  
+  # data for the state
   t_data = data[data$State == state,]
   
   check_rank <- function(num,data) {
