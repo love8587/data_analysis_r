@@ -31,34 +31,67 @@ loginPrompt <- function() {
         invisible(r)
 }
 
-submit <- function(resetLogin = FALSE) {
+submit <- function(manual = FALSE, resetLogin = FALSE) {
         library(RCurl)
         library(digest)
-        if(exists(".CourseraLogin") && !resetLogin)
-                cred <- get(".CourseraLogin")
-        else
-                cred <- loginPrompt()
-        if(!is.list(cred) || !(names(cred) %in% c("email", "passwd")))
-                stop("problem with login/password")
-        email <- cred$email
-        password <- cred$passwd
-        
+        if(!manual) {
+                if(exists(".CourseraLogin") && !resetLogin)
+                        cred <- get(".CourseraLogin")
+                else
+                        cred <- loginPrompt()
+                if(!is.list(cred) || !(names(cred) %in% c("email", "passwd")))
+                        stop("problem with login/password")
+                email <- cred$email
+                password <- cred$passwd
+        }
         ## Prompt Submission Part
         sid <- partPrompt()
 
-        ## Get challenge
-        ch <- getChallenge(email)
-
         ## Get output
         output <- getOutput(sid)
-        
-        ## Attempt submission with challenge
-        ch.resp <- challengeResponse(password, ch$ch.key)
-        results <- submitSolution(email, ch.resp, sid, output, ch$state)
-        if(results != "Correct!") 
-                results <- "Incorrect!"
-        cat("Result: ", results, "\n")
+
+        if(!manual) {
+                ## Get challenge
+                ch <- getChallenge(email)
+                
+                ## Attempt submission with challenge
+                ch.resp <- challengeResponse(password, ch$ch.key)
+                results <- submitSolution(email, ch.resp, sid, output, ch$state)
+                if(!length(results))
+                        results <- "Incorrect!"
+                cat("Result: ", results, "\n")
+        }
+        else {
+                outfile <- paste(sid, "output.txt", sep = "-")
+                writeLines(output, outfile)
+                cat(sprintf("Please upload the file '%s' to Coursera\n",
+                            outfile))
+        }
         invisible()
+}
+
+checkResult <- function(r, name = c("best", "rankhospital", "rankall")) {
+        name <- match.arg(name)
+        if(name == "best" || name == "rankhospital") {
+                if(length(r) == 1L && is.na(r))
+                        return(r)
+                if(!is.character(r))
+                        stop(sprintf("'%s' did not return a character vector",
+                                     name))
+                if(!length(r))
+                        stop(sprintf("'%s' returned character vector of length 0", name))
+                if(length(r) > 1)
+                        stop(sprintf("'%s' returned a character vector of length > 1", name))
+        }
+        else if(name == "rankall") {
+                if(!is.data.frame(r))
+                        stop(sprintf("'%s' did not return a data frame", name))
+                if(ncol(r) != 2L)
+                        stop(sprintf("'%s' should return data frame with exactly 2 columns", name))
+                if(!all(names(r) %in% c("hospital", "state")))
+                        stop("column names of data frame should be 'hospital' and 'state'")
+        }
+        r
 }
 
 getOutput <- function(sid) {
@@ -66,35 +99,38 @@ getOutput <- function(sid) {
                 source("best.R", local = TRUE)
                 cat("Running test:\n")
                 cat("best(\"SC\", \"heart attack\")\n")
-                best("SC", "heart attack")
+                r <- best("SC", "heart attack")
+                checkResult(r, "best")
         }
         else if(sid == "best-2") {
                 source("best.R", local = TRUE)
                 cat("Running test:\n")
                 cat("best(\"NY\", \"pneumonia\")\n")
-                best("NY", "pneumonia")
+                r <- best("NY", "pneumonia")
+                checkResult(r, "best")
         }
         else if(sid == "best-3") {
                 source("best.R", local = TRUE)
                 cat("Running test:\n")
                 cat("best(\"NN\", \"pneumonia\")\n")
-                tryCatch({
-                        best("NN", "pneumonia")
-                }, error = function(e) {
-                        tolower(conditionMessage(e))
-                })
+                r <- tryCatch(best("NN", "pneumonia"), error = function(e) e)
+                if(!inherits(r, "error"))
+                        stop("'best' should throw an error via the 'stop' function in this case")
+                tolower(conditionMessage(r))
         }
         else if(sid == "rankhospital-1") {
                 source("rankhospital.R", local = TRUE)
                 cat("Running test:\n")
                 cat("rankhospital(\"NC\", \"heart attack\", \"worst\")\n")
-                rankhospital("NC", "heart attack", "worst")
+                r <- rankhospital("NC", "heart attack", "worst")
+                checkResult(r, "rankhospital")
         }
         else if(sid == "rankhospital-2") {
                 source("rankhospital.R", local = TRUE)
                 cat("Running test:\n")
                 cat("rankhospital(\"WA\", \"heart attack\", 7)\n")
-                rankhospital("WA", "heart attack", 7)
+                r <- rankhospital("WA", "heart attack", 7)
+                checkResult(r, "rankhospital")
         }
         else if(sid == "rankhospital-3") {
                 source("rankhospital.R", local = TRUE)
@@ -106,18 +142,21 @@ getOutput <- function(sid) {
                 source("rankhospital.R", local = TRUE)
                 cat("Running test:\n")
                 cat("rankhospital(\"NY\", \"heart attak\", 7)\n")
-                tryCatch({
+                r <- tryCatch({
                         rankhospital("NY", "heart attak", 7)
                 }, error = function(e) {
-                        tolower(conditionMessage(e))
+                        e
                 })
+                if(!inherits(r, "error"))
+                        stop("'rankhospital' should throw an error via 'stop' in this case")
+                tolower(conditionMessage(r))
         }
         else if(sid == "rankall-1") {
                 source("rankall.R", local = TRUE)
                 cat("Running test:\n")
                 cat("rankall(\"heart attack\", 4)\n")
                 r <- rankall("heart attack", 4)
-                stopifnot(names(r) %in% c("hospital", "state"))
+                r <- checkResult(r, "rankall")
                 as.character(subset(r, state == "HI")$hospital)
         }
         else if(sid == "rankall-2") {
@@ -125,6 +164,7 @@ getOutput <- function(sid) {
                 cat("Running test:\n")
                 cat("rankall(\"pneumonia\", \"worst\")\n")
                 r <- rankall("pneumonia", "worst")
+                r <- checkResult(r, "rankall")
                 as.character(subset(r, state == "NJ")$hospital)
         }
         else if(sid == "rankall-3") {
@@ -132,6 +172,7 @@ getOutput <- function(sid) {
                 cat("Running test:\n")
                 cat("rankall(\"heart failure\", 10)\n")
                 r <- rankall("heart failure", 10)
+                r <- checkResult(r, "rankall")
                 as.character(subset(r, state == "NV")$hospital)
         }
         else {
@@ -165,7 +206,8 @@ partPrompt <- function() {
                      "'rankall' part 3"
                      )
         numparts <- length(sid)
-        cat(paste(paste0("[", seq_len(numparts), "]"), sidname), sep = "\n")
+        cat(paste(paste("[", seq_len(numparts), "]", sep = ""), sidname),
+            sep = "\n")
         partnum <- readline(sprintf("Which part are you submitting [1-%d]? ",
                                     numparts))
         partnum <- as.integer(partnum)               
@@ -182,11 +224,13 @@ getChallenge <- function(email) {
 }
 
 challengeResponse <- function(password, ch.key) {
-        x <- paste0(ch.key, password)
+        x <- paste(ch.key, password, sep = "")
         digest(x, algo = "sha1", serialize = FALSE)
 }
 
-submitSolution <- function(email, ch.resp, sid, output, signature, src = "") {
+submitSolution <- function(email, ch.resp, sid, output, signature, src = "",
+                           http.version = NULL) {
+        print(output)
         output <- as.character(base64(output))
         src <- as.character(base64(src))
         params <- list(assignment_part_sid = sid,
@@ -197,6 +241,7 @@ submitSolution <- function(email, ch.resp, sid, output, signature, src = "") {
                        state = signature)
         params <- lapply(params, URLencode)
         result <- postForm(submit.url, .params = params)
+        print(result)
         s <- strsplit(result, "\\r\\n")[[1]]
         tail(s, 1)
 }

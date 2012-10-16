@@ -85,7 +85,7 @@ rankall <- function(outcome,num = "best"){
   
   ret <- extract_rank_data(rank_val,t_data,idx,num)
   
-  names(ret) <- c("Hospital","State")
+  names(ret) <- c("hospital","state")
   
   return(ret)
 }

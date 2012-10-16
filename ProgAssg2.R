@@ -1,6 +1,5 @@
 outcome <- read.csv("outcome-of-care-measures.csv",colClasses="character")
 
-
 org = par(mfcol=c(3,1))
 
 #
