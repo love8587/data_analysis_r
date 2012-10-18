@@ -1,0 +1,35 @@
+tapply(t_data[,idx],t_data$State,FUN = function(x,num){
+        print(x)
+        print(num)
+        if (num == "best") {
+            return (t_data[which.min(x),2])
+        }else if (num == "worst") {
+            return (t_data[which.max(x),2])
+        }else {
+            rank = as.integer(num)
+            
+            if(is.na(rank) || rank > length(x)) {
+                return (NA)
+            }
+            return (t_data[order(x,t_data[,2]),2][1:rank])
+        }
+},num)
+
+rank-1 
+
+============ old  =================
+ret <- rankall("heart attack",4)
+
+> ret[ret$state == 'HI',]
+                     hospital state
+1043 WAHIAWA GENERAL HOSPITAL    HI
+1044      HILO MEDICAL CENTER    HI
+1045    CASTLE MEDICAL CENTER    HI
+1046   KUAKINI MEDICAL CENTER    HI
+============= new ============
+> ret[ret$state=='HI',]
+                     hospital state
+1044      HILO MEDICAL CENTER    HI
+1046   KUAKINI MEDICAL CENTER    HI
+1043 WAHIAWA GENERAL HOSPITAL    HI
+1045    CASTLE MEDICAL CENTER    HI

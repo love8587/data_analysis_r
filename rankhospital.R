@@ -43,15 +43,15 @@ rankhospital <-function(state,outcome,num = "best"){
   }
   
   if (outcome == 'heart attack') {
-    t_data <- t_data[with(t_data,order(t_data[,11])),]
+    t_data <- t_data[with(t_data,order(t_data[,11],t_data[,2])),]
     rank = check_rank(num,t_data[,11])
     
   }else if (outcome == 'heart failure') {
-    t_data <- t_data[with(t_data,order(t_data[,17])),]
+    t_data <- t_data[with(t_data,order(t_data[,17],t_data[,2])),]
     rank = check_rank(num,t_data[,17])
     
   }else{
-    t_data <- t_data[with(t_data,order(t_data[,23])),]
+    t_data <- t_data[with(t_data,order(t_data[,23],t_data[,2])),]
     rank = check_rank(num,t_data[,23])
 
   }
